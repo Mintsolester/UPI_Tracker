@@ -1,0 +1,6 @@
+{
+  "name": "UPI PayTrack",
+  "description": "UPI Payment Tracker & Budgeting application with monthly exports and limit notifications.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
