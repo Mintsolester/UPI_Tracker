@@ -10,6 +10,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
+import kotlinx.coroutines.delay
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -160,7 +161,6 @@ fun UpiPayTrackApp() {
                                     2 -> "Limits & Budgets"
                                     3 -> "Funding & Goals"
                                     4 -> "Smart Analytics"
-                                    5 -> "Instruction Manual"
                                     else -> "Budget & Flow"
                                 },
                                 fontSize = 10.sp,
@@ -169,19 +169,6 @@ fun UpiPayTrackApp() {
                         }
                     }
 
-                    Box(
-                        modifier = Modifier
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.primaryContainer)
-                            .padding(horizontal = 10.dp, vertical = 5.dp)
-                    ) {
-                        Text(
-                            text = "Fintech Suite",
-                            fontSize = 9.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-                    }
                 }
             }
         },
@@ -205,8 +192,7 @@ fun UpiPayTrackApp() {
                         Triple("Splits", Icons.Default.Group, 1),
                         Triple("Budgets", Icons.Default.TrackChanges, 2),
                         Triple("Goals", Icons.Default.Stars, 3),
-                        Triple("Analytics", Icons.Default.Analytics, 4),
-                        Triple("Manual", Icons.Default.MenuBook, 5)
+                        Triple("Analytics", Icons.Default.Analytics, 4)
                     )
                     tabItems.forEach { (title, icon, index) ->
                         val selected = currentTab == index
@@ -230,13 +216,13 @@ fun UpiPayTrackApp() {
                                     imageVector = icon,
                                     contentDescription = title,
                                     tint = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.size(18.dp)
+                                    modifier = Modifier.size(22.dp)
                                 )
                             }
                             Spacer(modifier = Modifier.height(2.dp))
                             Text(
                                 text = title,
-                                fontSize = 8.sp,
+                                fontSize = 10.sp,
                                 fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
                                 color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                                 maxLines = 1,
@@ -397,12 +383,12 @@ fun UpiPayTrackApp() {
                 )
                 4 -> ReportAnalyzer(
                     paymentsList = payments,
+
                     extendedBudgetStatuses = extendedBudgetStatuses,
                     onExportClick = { offset ->
                         viewModel.triggerShareReport(context, offset)
                     }
                 )
-                5 -> InstructionManualHub()
             }
 
             // In-app notifications overlay panel stacking
@@ -464,6 +450,11 @@ fun UpiPayTrackApp() {
                 }
 
                 inAppNotifications.take(2).forEach { item ->
+                    // Auto-dismiss notifications after 5 seconds
+                    LaunchedEffect(item.id) {
+                        delay(5000L)
+                        viewModel.removeInAppNotification(item.id)
+                    }
                     Card(
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
                         modifier = Modifier
@@ -644,19 +635,6 @@ fun QuickSummaryCard(
                     }
                 }
 
-                Box(
-                    modifier = Modifier
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primary)
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
-                ) {
-                    Text(
-                        text = "Active Status",
-                        fontSize = 9.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onPrimary
-                    )
-                }
             }
 
             Spacer(modifier = Modifier.height(10.dp))
@@ -1129,12 +1107,12 @@ fun PaymentCard(
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
             containerColor = if (payment.isOutgoing) MaterialTheme.colorScheme.surface 
-                             else Color(0xFFE8F5E9).copy(alpha = 0.6f)
+                             else MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
         ),
         border = androidx.compose.foundation.BorderStroke(
             1.dp, 
             if (payment.isOutgoing) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f) 
-            else Color(0xFFC8E6C9)
+            else MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
         )
     ) {
         Row(
@@ -1518,7 +1496,7 @@ fun ExtBudgetCard(
 ) {
     val levelColor = when (status.statusLevel) {
         BudgetLevel.EXCEEDED -> MaterialTheme.colorScheme.error
-        BudgetLevel.WARNING_80 -> Color(0xFFF71C00)
+        BudgetLevel.WARNING_80 -> Color(0xFFF57C00)
         BudgetLevel.WARNING_50 -> Color(0xFFFBC02D)
         BudgetLevel.NORMAL -> MaterialTheme.colorScheme.primary
     }
@@ -1733,7 +1711,7 @@ fun ReportAnalyzer(
                     }
 
                     Spacer(modifier = Modifier.height(12.dp))
-                    Divider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
                     Spacer(modifier = Modifier.height(12.dp))
 
                     Row(
@@ -1901,7 +1879,7 @@ fun ReportAnalyzer(
         item {
             Box(
                 modifier = Modifier
-                    .fillPadding()
+                    .fillMaxWidth()
                     .padding(vertical = 16.dp)
             ) {
                 Button(
@@ -1926,8 +1904,6 @@ fun ReportAnalyzer(
         }
     }
 }
-
-private fun Modifier.fillPadding() = this.fillMaxWidth()
 
 
 // ==================== MODAL DIALOG COMPONENTS ====================
@@ -2688,274 +2664,4 @@ private fun isTimestampInCurrentMonth(timestamp: Long): Boolean {
             cal1.get(Calendar.MONTH) == cal2.get(Calendar.MONTH)
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun InstructionManualHub() {
-    val categoriesList = listOf("Personal Ledger", "Bill Splitter", "Limits & Budgets", "Communal Goals", "Analytics Tool")
-    var activeCategory by remember { mutableStateOf("Personal Ledger") }
-
-    // Sandbox states for live tutorial
-    var mockFoodSpent by remember { mutableStateOf(350.0) }
-    var mockFoodLimit by remember { mutableStateOf(1000.0) }
-    var mockSalaryInflow by remember { mutableStateOf(0.0) }
-    var logList by remember { mutableStateOf(listOf("Welcome to the Interactive Sandbox! Try clicking a button below to learn how alerts trigger.")) }
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-            .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        // Welcoming card
-        Card(
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.Lightbulb,
-                        contentDescription = "Idea Icon",
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                        modifier = Modifier.size(24.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "UPI PayTrack User Manual",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                }
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "Welcome! This onboarding hub teaches you how to manage budgets, settle debts, split group transfers, and analyze cash flows. Select a module below to view guidelines or use the Sandbox Playground to try it live!",
-                    fontSize = 11.sp,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.85f),
-                    lineHeight = 15.sp
-                )
-            }
-        }
-
-        // Horizontal Category Tab Selector
-        LazyRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            items(categoriesList) { cat ->
-                val selected = cat == activeCategory
-                ElevatedFilterChip(
-                    selected = selected,
-                    onClick = { activeCategory = cat },
-                    label = { Text(cat, fontSize = 11.sp) }
-                )
-            }
-        }
-
-        // Selected topic content
-        Card(
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                when (activeCategory) {
-                    "Personal Ledger" -> {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.ReceiptLong, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("1. Personal Ledger Module", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                        }
-                        Text("• Record Inflows & Outflows: Tap \"Add Payment\" in your main screen to log salary inflows or daily UPI outflows.", fontSize = 11.sp)
-                        Text("• Real-Time Bookkeeper: Dynamic charts compute net-worth changes instantly. Inflows are green while outflows are displayed as high-contrast red.", fontSize = 11.sp)
-                        Text("• Categorization of Outlays: Assign every transfer to Food, Leisure, Rent, Health, Utilities, etc. tags.", fontSize = 11.sp)
-                        Text("• Smart Search Filter: Instantly query and find specific transactions using payee names or notes.", fontSize = 11.sp)
-                    }
-                    "Bill Splitter" -> {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Group, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("2. Bill Splits & Roommates", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                        }
-                        Text("• Roommate Database: Add your friends or roommates in the Splits tab with their full names and optional UPI IDs.", fontSize = 11.sp)
-                        Text("• Equal Group Distribution: Enter any joint bill (e.g., pizza, rent) and select who was involved. The app computes exact shares.", fontSize = 11.sp)
-                        Text("• Single-Tap Clearance: Tap \"Settle Owe\" to mark a split transaction as paid. If they have a configured UPI ID, it facilitates speedy settlement.", fontSize = 11.sp)
-                    }
-                    "Limits & Budgets" -> {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.TrackChanges, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("3. Limits & Budget Thresholds", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                        }
-                        Text("• Setting Caps: Define custom safe-spending thresholds for separate categories (e.g. max ₹8,000 allowance for Food).", fontSize = 11.sp)
-                        Text("• Multi-period Budgets: Support weekly allowances or custom-period budgets for trips, festivals, and events.", fontSize = 11.sp)
-                        Text("• In-App Notifications & Alerts: PayTrack triggers reactive warnings when spending reaches 50%, 80%, or 100% of the set limits.", fontSize = 11.sp)
-                        Text("• AI Budget Recommendations: Auto-generate optimized budget limits based on historical averages to maximize monthly savings.", fontSize = 11.sp)
-                    }
-                    "Communal Goals" -> {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Stars, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("4. Shared Goals & Campaigns", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                        }
-                        Text("• Launch Projects: Formulate savings goals (e.g. Scooter buy, vacation fund) on a specific timeline.", fontSize = 11.sp)
-                        Text("• Safe Accumulator: Add capital injections manually. Set-up dynamic targets with weeks remaining indicators.", fontSize = 11.sp)
-                        Text("• Completion Progress: Horizontal radial progress indicators show the completion status at a glance.", fontSize = 11.sp)
-                    }
-                    "Analytics Tool" -> {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Analytics, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("5. Financial Health Reports", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                        }
-                        Text("• Interactive Spark-lines: Review weekly trends, weekend spending concentrations, and category market slices.", fontSize = 11.sp)
-                        Text("• Savings Influx: Displays monthly savings rate targets and overall physical financial wellness grades.", fontSize = 11.sp)
-                        Text("• CSV Report Portability: Back-up or import records using the CSV Export button on the Analytics screen.", fontSize = 11.sp)
-                    }
-                }
-            }
-        }
-
-        // THE GREAT INTERACTIVE SANDBOX PLAYGROUND CARDS!
-        ElevatedCard(
-            shape = RoundedCornerShape(16.dp),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.SportsEsports,
-                        contentDescription = "Play Icon",
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(22.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "Real-Time Sandbox Simulator",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
-
-                Text(
-                    text = "A zero-stakes playground to see how notifications, smart alerts, and split computations are executed under the hood!",
-                    fontSize = 11.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-
-                // Visual metrics dashboard
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(
-                            MaterialTheme.colorScheme.surfaceContainerHighest,
-                            shape = RoundedCornerShape(12.dp)
-                        )
-                        .padding(12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Column {
-                        Text("MOCK FOOD SPENT", fontSize = 9.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text("₹$mockFoodSpent / ₹$mockFoodLimit", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                        LinearProgressIndicator(
-                            progress = { (mockFoodSpent / mockFoodLimit).toFloat().coerceIn(0f, 1f) },
-                            modifier = Modifier.width(100.dp).padding(top = 4.dp),
-                            color = if (mockFoodSpent >= mockFoodLimit) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
-                        )
-                    }
-                    Column(horizontalAlignment = Alignment.End) {
-                        Text("MOCK INCOME INFLUX", fontSize = 9.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text("₹$mockSalaryInflow", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = if (mockSalaryInflow > 0) Color(0xFF4CAF50) else MaterialTheme.colorScheme.onSurface)
-                        Text("Rate: +${if (mockSalaryInflow > 0) "42%" else "0%"}", fontSize = 9.sp, color = MaterialTheme.colorScheme.primary)
-                    }
-                }
-
-                Text("Sandbox Controls (Tap to test):", fontSize = 11.sp, fontWeight = FontWeight.Bold)
-
-                // Buttons container
-                Row(
-                    modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Button(
-                        onClick = {
-                            val nextVal = mockFoodSpent + 200.0
-                            mockFoodSpent = nextVal
-                            var alertMsg = ""
-                            if (nextVal >= mockFoodLimit) {
-                                alertMsg = " [ALERT OVERSPENT: Food limit of ₹$mockFoodLimit exceeded! PayTrack warning panel pop-up triggered]"
-                            } else if (nextVal >= mockFoodLimit * 0.8) {
-                                alertMsg = " [ALERT 80%: Food budget at 80% capability! Prompt triggered]"
-                            } else if (nextVal >= mockFoodLimit * 0.5) {
-                                alertMsg = " [ALERT 50%: 50% threshold reached. Safe warnings dispatched]"
-                            }
-                            logList = listOf("Recorded ₹200 food expense. Food status now at ${String.format(Locale.US, "%.1f", (nextVal / mockFoodLimit * 100))}%$alertMsg") + logList
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
-                    ) {
-                        Text("Buy ₹200 Snacks", fontSize = 10.sp)
-                    }
-
-                    Button(
-                        onClick = {
-                            mockSalaryInflow += 12000.0
-                            logList = listOf("Received salary influx of ₹12,000! Active monthly savings projections increased. Ledger summary updated.") + logList
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
-                    ) {
-                        Text("Add ₹12k Income", fontSize = 10.sp)
-                    }
-
-                    Button(
-                        onClick = {
-                            logList = listOf("Simulated pizza dinner costing ₹900 divided among 3 roommates (Alice, Bob, You). Each companion's share set to ₹300. Bob settled his ₹300 using companion UPI scanner!") + logList
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary),
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
-                    ) {
-                        Text("Simulate Group Split", fontSize = 10.sp)
-                    }
-
-                    Button(
-                        onClick = {
-                            mockFoodSpent = 0.0
-                            mockSalaryInflow = 0.0
-                            logList = listOf("Simulator values reset successfully.")
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant, contentColor = MaterialTheme.colorScheme.onSurfaceVariant),
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
-                    ) {
-                        Text("Reset Sandbox", fontSize = 10.sp)
-                    }
-                }
-
-                // Logging output window
-                Text("Live Feedback Terminal:", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(84.dp)
-                        .background(
-                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.07f),
-                            shape = RoundedCornerShape(8.dp)
-                        )
-                        .padding(8.dp)
-                        .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    logList.forEach { log ->
-                        Text("❯ $log", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f), lineHeight = 13.sp)
-                    }
-                }
-            }
-        }
-    }
-}
+// InstructionManualHub removed — sandbox simulator was not connected to real data
